@@ -44,12 +44,14 @@ clone() {
     while read line; do
         parse_line "$line"
         local dir="$store/$name"
-        if [[ ! -e "$dir/$list" || -e "$dir/$store" ]]; then
+        if [[ ! -e "$dir/$list" ]]; then
             continue
         fi
         clone "$dir"
-        local rel=$(realpath --relative-to "$dir/$store" "$store")
-        ln -s "$rel/$store" "$dir/$store"
+        if [[ ! -e "$dir/$store" ]]; then
+            local rel=$(realpath --relative-to "$dir/$store" "$store")
+            ln -s "$rel/$store" "$dir/$store"
+        fi
     done < "$proj/$list"
 }
 
