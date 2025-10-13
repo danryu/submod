@@ -49,8 +49,9 @@ clone() {
         fi
         clone "$dir"
         if [[ ! -e "$dir/$store" ]]; then
-            local rel=$(realpath --relative-to "$dir/$store" "$store")
-            ln -s "$rel/$store" "$dir/$store"
+            # Create relative symlink back to root submodules directory
+            # For submodules/foo/submodules -> ../../submodules
+            ln -s "../../$store" "$dir/$store"
         fi
     done < "$proj/$list"
 }
