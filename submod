@@ -68,12 +68,13 @@ clone() {
         if [[ ! -e "$dir/$list" ]]; then
             continue
         fi
-        clone "$dir"
         if [[ ! -e "$dir/$store" ]]; then
-            # Create relative symlink back to root submodules directory
-            # For submodules/foo/submodules -> ../../submodules
+            # Create the back-link BEFORE recursing so that fix_symlinks inside
+            # can resolve symlink targets that go through this path.
+            # e.g. submodules/cutil-macros/submodules -> ../../submodules
             ln -s "../../$store" "$dir/$store"
         fi
+        clone "$dir"
     done < "$proj/$list"
 
     # Recreate all git-tracked symlinks now that their targets exist.
