@@ -22,6 +22,27 @@ parse_line() {
     rev=${elms[2]}
 }
 
+# Recreate git-tracked symlinks in a repo directory.
+# On Windows, git clone produces wrong-type or dangling NTFS reparse points
+# because symlink targets don't exist yet at checkout time.  This function
+# re-creates every 120000-mode entry using ln -s after all targets are present.
+# With MSYS=winsymlinks:nativestrict in the environment, ln -s produces real
+# NTFS directory symlinks; on macOS/Linux it is a normal no-op ln -s.
+# $1 repo dir (relative to CWD, defaults to .)
+fix_symlinks() {
+    local proj="${1:-.}"
+    while IFS= read -r entry; do
+        local hash path target link_path
+        hash=$(echo "$entry" | awk '{print $3}')
+        path=$(echo "$entry" | awk '{print $4}')
+        target=$(git -C "$proj" cat-file blob "$hash")
+        link_path="$proj/$path"
+        rm -f "$link_path"
+        mkdir -p "$(dirname "$link_path")"
+        ln -s "$target" "$link_path"
+    done < <(git -C "$proj" ls-tree -r HEAD | grep "^120000 ")
+}
+
 # $1? project dir
 clone() {
     local proj=${1:-.}
@@ -54,6 +75,9 @@ clone() {
             ln -s "../../$store" "$dir/$store"
         fi
     done < "$proj/$list"
+
+    # Recreate all git-tracked symlinks now that their targets exist.
+    fix_symlinks "$proj"
 }
 
 # $1 dir
