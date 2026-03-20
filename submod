@@ -39,7 +39,18 @@ fix_symlinks() {
         link_path="$proj/$path"
         rm -f "$link_path"
         mkdir -p "$(dirname "$link_path")"
-        ln -s "$target" "$link_path"
+        # Resolve to the real final path when possible.  Chained symlinks (A→B→C)
+        # are unreliable with MSVC include resolution on Windows, so we collapse
+        # each symlink to a single-hop absolute path pointing straight at the
+        # ultimate target.  Falls back to the original relative target if the
+        # target doesn't exist yet (should not happen given our ordering above).
+        local target_abs resolved
+        target_abs="$(cd "$(dirname "$link_path")" && pwd)/$target"
+        if resolved=$(realpath "$target_abs" 2>/dev/null) && [ -e "$resolved" ]; then
+            ln -s "$resolved" "$link_path"
+        else
+            ln -s "$target" "$link_path"
+        fi
     done < <(git -C "$proj" ls-tree -r HEAD | grep "^120000 ")
 }
 
